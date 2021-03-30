@@ -21,10 +21,6 @@ pub trait Iden {
     fn unquoted(&self, s: &mut dyn fmt::Write);
 }
 
-pub trait IntoIden {
-    fn into_iden(self) -> Rc<dyn Iden>;
-}
-
 impl fmt::Debug for dyn Iden {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.unquoted(formatter);
@@ -39,10 +35,6 @@ pub enum ColumnRef {
     TableColumn(Rc<dyn Iden>, Rc<dyn Iden>),
 }
 
-pub trait IntoColumnRef {
-    fn into_column_ref(self) -> ColumnRef;
-}
-
 /// Table references
 #[allow(clippy::large_enum_variant)]
 #[derive(Debug, Clone)]
@@ -52,10 +44,6 @@ pub enum TableRef {
     TableAlias(Rc<dyn Iden>, Rc<dyn Iden>),
     SchemaTableAlias(Rc<dyn Iden>, Rc<dyn Iden>, Rc<dyn Iden>),
     SubQuery(SelectStatement, Rc<dyn Iden>),
-}
-
-pub trait IntoTableRef {
-    fn into_table_ref(self) -> TableRef;
 }
 
 /// Unary operator
@@ -139,53 +127,38 @@ pub enum Keyword {
 
 // Impl begins
 
-impl<T: 'static> IntoIden for T
-    where T: Iden {
-    fn into_iden(self) -> Rc<dyn Iden> {
-        Rc::new(self)
+impl Into<ColumnRef> for dyn Iden + 'static {
+    fn into(self) -> ColumnRef {
+        ColumnRef::Column(self.into())
     }
 }
 
-impl IntoIden for Rc<dyn Iden> {
-    fn into_iden(self) -> Rc<dyn Iden> {
-        self
+impl Into<ColumnRef> for (dyn Iden + 'static, dyn Iden + 'static) {
+    fn into(self) -> ColumnRef {
+        ColumnRef::TableColumn(self.0.into(), self.1.into())
     }
 }
 
-impl<T: 'static> IntoColumnRef for T
-    where T: IntoIden {
-    fn into_column_ref(self) -> ColumnRef {
-        ColumnRef::Column(self.into_iden())
+impl Into<TableRef> for dyn Iden + 'static {
+    fn into(self) -> TableRef {
+        TableRef::Table(self.into())
     }
 }
 
-impl<S: 'static, T: 'static> IntoColumnRef for (S, T)
-    where S: IntoIden, T: IntoIden {
-    fn into_column_ref(self) -> ColumnRef {
-        ColumnRef::TableColumn(self.0.into_iden(), self.1.into_iden())
-    }
-}
-
-impl<T: 'static> IntoTableRef for T
-    where T: IntoIden {
-    fn into_table_ref(self) -> TableRef {
-        TableRef::Table(self.into_iden())
-    }
-}
-
-impl<S: 'static, T: 'static> IntoTableRef for (S, T)
-    where S: IntoIden, T: IntoIden {
-    fn into_table_ref(self) -> TableRef {
-        TableRef::SchemaTable(self.0.into_iden(), self.1.into_iden())
+impl Into<TableRef> for (dyn Iden + 'static, dyn Iden + 'static) {
+    fn into(self) -> TableRef {
+        TableRef::SchemaTable(self.0.into(), self.1.into())
     }
 }
 
 impl TableRef {
-    pub fn alias<A: 'static>(self, alias: A) -> Self
-        where A: IntoIden {
+    pub fn alias<A>(self, alias: A) -> Self
+    where
+        A: Into<Rc<dyn Iden + 'static>>,
+    {
         match self {
-            Self::Table(table) => Self::TableAlias(table, alias.into_iden()),
-            Self::SchemaTable(schema, table) => Self::SchemaTableAlias(schema, table, alias.into_iden()),
+            Self::Table(table) => Self::TableAlias(table, alias.into()),
+            Self::SchemaTable(schema, table) => Self::SchemaTableAlias(schema, table, alias.into()),
             _ => panic!("unexpected TableRef variant")
         }
     }

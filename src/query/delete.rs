@@ -1,3 +1,4 @@
+use std::rc::Rc;
 use crate::{backend::QueryBuilder, types::*, expr::*, value::*, prepare::*};
 
 /// Delete existing rows from the table
@@ -78,8 +79,8 @@ impl DeleteStatement {
     /// ```
     #[allow(clippy::wrong_self_convention)]
     pub fn from_table<T>(&mut self, tbl_ref: T) -> &mut Self
-        where T: IntoTableRef {
-        self.table = Some(Box::new(tbl_ref.into_table_ref()));
+        where T: Into<TableRef> {
+        self.table = Some(Box::new(tbl_ref.into()));
         self
     }
 
@@ -169,9 +170,9 @@ impl DeleteStatement {
 
     /// Order by column.
     pub fn order_by<T>(&mut self, col: T, order: Order) -> &mut Self 
-        where T: IntoColumnRef {
+        where T: Into<ColumnRef> {
         self.orders.push(OrderExpr {
-            expr: SimpleExpr::Column(col.into_column_ref()),
+            expr: SimpleExpr::Column(col.into()),
             order,
         });
         self
@@ -184,8 +185,8 @@ impl DeleteStatement {
     /// Order by column with table name prefix.
     pub fn order_by_tbl<T, C>
         (&mut self, table: T, col: C, order: Order) -> &mut Self 
-        where T: IntoIden, C: IntoIden {
-        self.order_by((table.into_iden(), col.into_iden()), order)
+        where T: Into<Rc<dyn Iden + 'static>>, C: Into<Rc<dyn Iden + 'static>> {
+        self.order_by(ColumnRef::TableColumn(table.into(), col.into()), order)
     }
 
     /// Order by [`SimpleExpr`].
@@ -211,10 +212,10 @@ impl DeleteStatement {
 
     /// Order by columns.
     pub fn order_by_columns<T>(&mut self, cols: Vec<(T, Order)>) -> &mut Self 
-        where T: IntoColumnRef {
+        where T: Into<ColumnRef> {
         let mut orders = cols.into_iter().map(
             |(c, order)| OrderExpr {
-                expr: SimpleExpr::Column(c.into_column_ref()),
+                expr: SimpleExpr::Column(c.into()),
                 order,
             }).collect();
         self.orders.append(&mut orders);
@@ -227,8 +228,8 @@ impl DeleteStatement {
     )]
     pub fn order_by_table_columns<T, C>
         (&mut self, cols: Vec<(T, C, Order)>) -> &mut Self 
-        where T: IntoIden, C: IntoIden {
-        self.order_by_columns(cols.into_iter().map(|(t, c, o)| ((t.into_iden(), c.into_iden()), o)).collect())
+        where T: Into<Rc<dyn Iden + 'static>>, C: Into<Rc<dyn Iden + 'static>> {
+        self.order_by_columns(cols.into_iter().map(|(t, c, o)| (ColumnRef::TableColumn(t.into(), c.into()), o)).collect())
     }
 
     /// Limit number of updated rows.

@@ -69,8 +69,8 @@ impl InsertStatement {
     /// See [`InsertStatement::values`]
     #[allow(clippy::wrong_self_convention)]
     pub fn into_table<T>(&mut self, tbl_ref: T) -> &mut Self
-        where T: IntoTableRef {
-            self.table = Some(Box::new(tbl_ref.into_table_ref()));
+        where T: Into<TableRef> {
+            self.table = Some(Box::new(tbl_ref.into()));
             self
     }
 
@@ -80,8 +80,8 @@ impl InsertStatement {
     /// 
     /// See [`InsertStatement::values`]
     pub fn columns<C>(&mut self, columns: Vec<C>) -> &mut Self
-        where C: IntoIden {
-        self.columns = columns.into_iter().map(|c| c.into_iden()).collect();
+        where C: Into<Rc<dyn Iden + 'static>> {
+        self.columns = columns.into_iter().map(|c| c.into()).collect();
         self
     }
 

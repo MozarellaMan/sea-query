@@ -53,8 +53,8 @@ impl Func {
     /// );
     /// ```
     pub fn cust<T>(func: T) -> Expr
-        where T: IntoIden {
-        Expr::func(Function::Custom(func.into_iden()))
+        where T: Into<Rc<dyn Iden + 'static>> {
+        Expr::func(Function::Custom(func.into()))
     }
 
     /// Call `MAX` function.

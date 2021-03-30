@@ -1,6 +1,7 @@
 #[cfg(feature="with-json")]
 use serde_json::Value as JsonValue;
 use crate::{backend::QueryBuilder, types::*, expr::*, value::*, prepare::*};
+use std::rc::Rc;
 
 /// Update existing rows in the table
 /// 
@@ -65,8 +66,8 @@ impl UpdateStatement {
     /// See [`UpdateStatement::values`]
     #[allow(clippy::wrong_self_convention)]
     pub fn table<T>(&mut self, tbl_ref: T) -> &mut Self
-        where T: IntoTableRef {
-        self.table = Some(Box::new(tbl_ref.into_table_ref()));
+        where T: Into<TableRef> {
+        self.table = Some(Box::new(tbl_ref.into()));
         self
     }
 
@@ -76,7 +77,7 @@ impl UpdateStatement {
     )]
     #[allow(clippy::wrong_self_convention)]
     pub fn into_table<T>(&mut self, table: T) -> &mut Self
-        where T: IntoTableRef {
+        where T: Into<TableRef> {
         self.table(table)
     }
 
@@ -110,8 +111,8 @@ impl UpdateStatement {
     /// );
     /// ```
     pub fn value_expr<T>(&mut self, col: T, exp: SimpleExpr) -> &mut Self
-        where T: IntoIden {
-        self.push_boxed_value(col.into_iden().to_string(), exp);
+        where T: Into<Rc<dyn Iden + 'static>> {
+        self.push_boxed_value(col.into().to_string(), exp);
         self
     }
 
@@ -188,9 +189,9 @@ impl UpdateStatement {
     /// );
     /// ```
     pub fn values<T>(&mut self, values: Vec<(T, Value)>) -> &mut Self
-        where T: IntoIden {
+        where T: Into<Rc<dyn Iden + 'static>> {
         for (k, v) in values.into_iter() {
-            self.push_boxed_value(k.into_iden().to_string(), SimpleExpr::Value(v));
+            self.push_boxed_value(k.into().to_string(), SimpleExpr::Value(v));
         }
         self
     }
@@ -223,8 +224,8 @@ impl UpdateStatement {
     /// );
     /// ```
     pub fn value<T>(&mut self, col: T, value: Value) -> &mut Self
-        where T: IntoIden {
-        self.push_boxed_value(col.into_iden().to_string(), SimpleExpr::Value(value));
+        where T: Into<Rc<dyn Iden + 'static>> {
+        self.push_boxed_value(col.into().to_string(), SimpleExpr::Value(value));
         self
     }
 
@@ -327,9 +328,9 @@ impl UpdateStatement {
 
     /// Order by column.
     pub fn order_by<T>(&mut self, col: T, order: Order) -> &mut Self 
-        where T: IntoColumnRef {
+        where T: Into<ColumnRef> {
         self.orders.push(OrderExpr {
-            expr: SimpleExpr::Column(col.into_column_ref()),
+            expr: SimpleExpr::Column(col.into()),
             order,
         });
         self
@@ -341,8 +342,8 @@ impl UpdateStatement {
     )]
     pub fn order_by_tbl<T, C>
         (&mut self, table: T, col: C, order: Order) -> &mut Self 
-        where T: IntoIden, C: IntoIden {
-        self.order_by((table.into_iden(), col.into_iden()), order)
+        where T: Into<Rc<dyn Iden + 'static>>, C: Into<Rc<dyn Iden + 'static>> {
+        self.order_by(ColumnRef::TableColumn(table.into(), col.into()), order)
     }
 
     /// Order by [`SimpleExpr`].
@@ -368,10 +369,10 @@ impl UpdateStatement {
 
     /// Order by vector of columns.
     pub fn order_by_columns<T>(&mut self, cols: Vec<(T, Order)>) -> &mut Self 
-        where T: IntoColumnRef {
+        where T: Into<ColumnRef> {
         let mut orders = cols.into_iter().map(
             |(c, order)| OrderExpr {
-                expr: SimpleExpr::Column(c.into_column_ref()),
+                expr: SimpleExpr::Column(c.into()),
                 order,
             }).collect();
         self.orders.append(&mut orders);
@@ -384,8 +385,8 @@ impl UpdateStatement {
     )]
     pub fn order_by_table_columns<T, C>
         (&mut self, cols: Vec<(T, C, Order)>) -> &mut Self 
-        where T: IntoIden, C: IntoIden {
-        self.order_by_columns(cols.into_iter().map(|(t, c, o)| ((t.into_iden(), c.into_iden()), o)).collect())
+        where T: Into<Rc<dyn Iden + 'static>>, C: Into<Rc<dyn Iden + 'static>> {
+        self.order_by_columns(cols.into_iter().map(|(t, c, o)| (ColumnRef::TableColumn(t.into(), c.into()), o)).collect())
     }
 
     /// Limit number of updated rows.

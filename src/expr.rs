@@ -9,6 +9,7 @@
 //! Two [`SimpleExpr`] can be chain together with method defined below, such as logical AND,
 //! logical OR, arithmetic ADD ...etc. Please reference below for more details.
 
+use std::rc::Rc;
 use crate::{query::*, func::*, types::*, value::*};
 
 /// Helper to build a [`SimpleExpr`].
@@ -106,8 +107,8 @@ impl Expr {
     /// );
     /// ```
     pub fn col<T>(n: T) -> Self
-        where T: IntoColumnRef {
-        Self::new_with_left(SimpleExpr::Column(n.into_column_ref()))
+        where T: Into<ColumnRef> {
+        Self::new_with_left(SimpleExpr::Column(n.into()))
     }
 
     /// Express the target column with table prefix.
@@ -137,8 +138,8 @@ impl Expr {
     /// );
     /// ```
     pub fn tbl<T, C>(t: T, c: C) -> Self
-        where T: IntoIden, C: IntoIden {
-        Self::col((t.into_iden(), c.into_iden()))
+        where T: Into<Rc<dyn Iden + 'static>>, C: Into<Rc<dyn Iden + 'static>> {
+        Self::col(ColumnRef::TableColumn(t.into(), c.into()))
     }
 
     /// Express a [`Value`], returning a [`Expr`].
@@ -391,8 +392,8 @@ impl Expr {
     /// );
     /// ```
     pub fn equals<T, C>(self, t: T, c: C) -> SimpleExpr
-        where T: IntoIden, C: IntoIden {
-        self.bin_oper(BinOper::Equal, SimpleExpr::Column((t.into_iden(), c.into_iden()).into_column_ref()))
+        where T: Into<Rc<dyn Iden + 'static>>, C: Into<Rc<dyn Iden + 'static>> {
+        self.bin_oper(BinOper::Equal, SimpleExpr::Column(ColumnRef::TableColumn(t.into(), c.into())))
     }
 
     /// Express a greater than (`>`) expression.

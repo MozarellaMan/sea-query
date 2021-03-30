@@ -99,9 +99,9 @@ impl TypeCreateStatement {
     }
 
     pub fn values<T>(&mut self, values: Vec<T>) -> &mut Self
-        where T: IntoIden {
+        where T: Into<Rc<dyn Iden + 'static>> {
         for v in values.into_iter() {
-            self.values.push(v.into_iden());
+            self.values.push(v.into());
         }
         self
     }
@@ -166,15 +166,15 @@ impl TypeDropStatement {
     /// );
     /// ```
     pub fn name<T>(&mut self, name: T) -> &mut Self
-        where T: IntoIden {
-        self.names.push(name.into_iden());
+        where T: Into<Rc<dyn Iden + 'static>> {
+        self.names.push(name.into());
         self
     }
 
     pub fn names<T>(&mut self, names: Vec<T>) -> &mut Self
-        where T: IntoIden {
+        where T: Into<Rc<dyn Iden + 'static>> {
         for n in names.into_iter() {
-            self.names.push(n.into_iden());
+            self.names.push(n.into());
         }
         self
     }

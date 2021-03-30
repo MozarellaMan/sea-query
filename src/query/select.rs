@@ -282,8 +282,8 @@ impl SelectStatement {
     /// );
     /// ```
     pub fn column<C>(&mut self, col: C) -> &mut Self
-        where C: IntoColumnRef {
-        self.expr(SimpleExpr::Column(col.into_column_ref()))
+        where C: Into<ColumnRef> {
+        self.expr(SimpleExpr::Column(col.into()))
     }
 
     #[deprecated(
@@ -291,8 +291,8 @@ impl SelectStatement {
         note = "Please use the [`SelectStatement::column`] with a tuple as [`ColumnRef`]"
     )]
     pub fn table_column<T, C>(&mut self, t: T, c: C) -> &mut Self
-        where T: IntoIden, C: IntoIden {
-        self.column((t.into_iden(), c.into_iden()))
+        where T: Into<Rc<dyn Iden + 'static>>, C: Into<Rc<dyn Iden + 'static>> {
+        self.column(ColumnRef::TableColumn(t.into(), c.into()))
     }
 
     /// Select columns.
@@ -351,8 +351,8 @@ impl SelectStatement {
     /// );
     /// ```
     pub fn columns<T>(&mut self, cols: Vec<T>) -> &mut Self
-        where T: IntoColumnRef {
-        self.exprs(cols.into_iter().map(|c| SimpleExpr::Column(c.into_column_ref())).collect())
+        where T: Into<ColumnRef> {
+        self.exprs(cols.into_iter().map(|c| SimpleExpr::Column(c.into())).collect())
     }
 
     #[deprecated(
@@ -360,8 +360,8 @@ impl SelectStatement {
         note = "Please use the [`SelectStatement::columns`] with a tuple as [`ColumnRef`]"
     )]
     pub fn table_columns<T, C>(&mut self, cols: Vec<(T, C)>) -> &mut Self
-        where T: IntoIden, C: IntoIden {
-        self.columns(cols.into_iter().map(|(t, c)| (t.into_iden(), c.into_iden())).collect())
+        where T: Into<Rc<dyn Iden + 'static>>, C: Into<Rc<dyn Iden + 'static>> {
+        self.columns(cols.into_iter().map(|(t, c)| ColumnRef::TableColumn(t.into(), c.into())).collect())
     }
 
     /// Select column.
@@ -390,10 +390,10 @@ impl SelectStatement {
     /// );
     /// ```
     pub fn expr_as<T, A>(&mut self, expr: T, alias: A) -> &mut Self
-        where T: Into<SimpleExpr>, A: IntoIden {
+        where T: Into<SimpleExpr>, A: Into<Rc<dyn Iden + 'static>> {
         self.expr(SelectExpr {
             expr: expr.into(),
-            alias: Some(alias.into_iden())
+            alias: Some(alias.into())
         });
         self
     }
@@ -403,7 +403,7 @@ impl SelectStatement {
         note = "Please use the [`SelectStatement::expr_as`] instead"
     )]
     pub fn expr_alias<T, A>(&mut self, expr: T, alias: A) -> &mut Self
-        where T: Into<SimpleExpr>, A: IntoIden {
+        where T: Into<SimpleExpr>, A: Into<Rc<dyn Iden + 'static>> {
         self.expr_as(expr, alias)
     }
 
@@ -455,8 +455,8 @@ impl SelectStatement {
     /// );
     /// ```
     pub fn from<R>(&mut self, tbl_ref: R) -> &mut Self
-        where R: IntoTableRef {
-        self.from_from(tbl_ref.into_table_ref())
+        where R: Into<TableRef> {
+        self.from_from(tbl_ref.into())
     }
 
     #[deprecated(
@@ -488,9 +488,9 @@ impl SelectStatement {
     ///     r#"SELECT `font_size` FROM `character`.`glyph`"#
     /// );
     /// ```
-    pub fn from_schema<S: 'static, T: 'static>(&mut self, schema: S, table: T) -> &mut Self
-        where S: IntoIden, T: IntoIden {
-        self.from((schema, table))
+    pub fn from_schema<S, T>(&mut self, schema: S, table: T) -> &mut Self
+        where S: Into<Rc<dyn Iden + 'static>>, T: Into<Rc<dyn Iden + 'static>> {
+        self.from(TableRef::SchemaTable(schema.into(), table.into()))
     }
 
     /// From table with alias.
@@ -546,8 +546,8 @@ impl SelectStatement {
     /// );
     /// ```
     pub fn from_as<R, A>(&mut self, tbl_ref: R, alias: A) -> &mut Self
-        where R: IntoTableRef, A: IntoIden {
-        self.from_from(tbl_ref.into_table_ref().alias(alias.into_iden()))
+        where R: Into<TableRef>, A: Into<Rc<dyn Iden + 'static>> {
+        self.from_from(tbl_ref.into().alias(alias.into()))
     }
 
     #[deprecated(
@@ -555,7 +555,7 @@ impl SelectStatement {
         note = "Please use the [`SelectStatement::from_as`] instead"
     )]
     pub fn from_alias<R, A>(&mut self, tbl_ref: R, alias: A) -> &mut Self
-        where R: IntoTableRef, A: IntoIden {
+        where R: Into<TableRef>, A: Into<Rc<dyn Iden + 'static>> {
         self.from_as(tbl_ref, alias)
     }
 
@@ -563,9 +563,9 @@ impl SelectStatement {
         since = "0.9.0",
         note = "Please use the [`SelectStatement::from_as`] with a tuple as [`TableRef`]"
     )]
-    pub fn from_schema_as<S: 'static, T: 'static, A>(&mut self, schema: S, table: T, alias: A) -> &mut Self
-        where S: IntoIden, T: IntoIden, A: IntoIden {
-        self.from_as((schema, table), alias)
+    pub fn from_schema_as<S, T, A>(&mut self, schema: S, table: T, alias: A) -> &mut Self
+        where S: Into<Rc<dyn Iden + 'static>>, T: Into<Rc<dyn Iden + 'static>>, A: Into<Rc<dyn Iden + 'static>> {
+        self.from_as(TableRef::SchemaTable(schema.into(), table.into()), alias)
     }
 
     /// From sub-query.
@@ -604,8 +604,8 @@ impl SelectStatement {
     /// );
     /// ```
     pub fn from_subquery<T>(&mut self, query: SelectStatement, alias: T) -> &mut Self
-        where T: IntoIden {
-        self.from_from(TableRef::SubQuery(query, alias.into_iden()))
+        where T: Into<Rc<dyn Iden + 'static>> {
+        self.from_from(TableRef::SubQuery(query, alias.into()))
     }
 
     fn from_from(&mut self, select: TableRef) -> &mut Self {
@@ -641,7 +641,7 @@ impl SelectStatement {
     /// );
     /// ```
     pub fn left_join<R>(&mut self, tbl_ref: R, condition: SimpleExpr) -> &mut Self 
-        where R: IntoTableRef {
+        where R: Into<TableRef> {
         self.join(JoinType::LeftJoin, tbl_ref, condition)
     }
 
@@ -673,7 +673,7 @@ impl SelectStatement {
     /// );
     /// ```
     pub fn inner_join<R>(&mut self, tbl_ref: R, condition: SimpleExpr) -> &mut Self 
-        where R: IntoTableRef {
+        where R: Into<TableRef> {
         self.join(JoinType::InnerJoin, tbl_ref, condition)
     }
 
@@ -705,8 +705,8 @@ impl SelectStatement {
     /// );
     /// ```
     pub fn join<R>(&mut self, join: JoinType, tbl_ref: R, condition: SimpleExpr) -> &mut Self 
-        where R: IntoTableRef {
-        self.join_join(join, tbl_ref.into_table_ref(), JoinOn::Condition(Box::new(condition)))
+        where R: Into<TableRef> {
+        self.join_join(join, tbl_ref.into(), JoinOn::Condition(Box::new(condition)))
     }
 
     /// Join with other table by [`JoinType`], assigning an alias to the joined table.
@@ -742,8 +742,8 @@ impl SelectStatement {
     /// );
     /// ```
     pub fn join_as<R, A>(&mut self, join: JoinType, tbl_ref: R, alias: A, condition: SimpleExpr) -> &mut Self 
-        where R: IntoTableRef, A: IntoIden {
-        self.join_join(join, tbl_ref.into_table_ref().alias(alias.into_iden()), JoinOn::Condition(Box::new(condition)))
+        where R: Into<TableRef>, A: Into<Rc<dyn Iden + 'static>> {
+        self.join_join(join, tbl_ref.into().alias(alias.into()), JoinOn::Condition(Box::new(condition)))
     }
 
     #[deprecated(
@@ -751,7 +751,7 @@ impl SelectStatement {
         note = "Please use the [`SelectStatement::join_as`] instead"
     )]
     pub fn join_alias<R, A>(&mut self, join: JoinType, tbl_ref: R, alias: A, condition: SimpleExpr) -> &mut Self 
-        where R: IntoTableRef, A: IntoIden {
+        where R: Into<TableRef>, A: Into<Rc<dyn Iden + 'static>> {
         self.join_as(join, tbl_ref, alias, condition)
     }
 
@@ -793,8 +793,8 @@ impl SelectStatement {
     /// ```
     /// 
     pub fn join_subquery<T>(&mut self, join: JoinType, query: SelectStatement, alias: T, condition: SimpleExpr) -> &mut Self
-        where T: IntoIden {
-        self.join_join(join, TableRef::SubQuery(query, alias.into_iden()), JoinOn::Condition(Box::new(condition)))
+        where T: Into<Rc<dyn Iden + 'static>> {
+        self.join_join(join, TableRef::SubQuery(query, alias.into()), JoinOn::Condition(Box::new(condition)))
     }
 
     fn join_join(&mut self, join: JoinType, table: TableRef, on: JoinOn) -> &mut Self {
@@ -864,8 +864,8 @@ impl SelectStatement {
     /// );
     /// ```
     pub fn group_by_columns<T>(&mut self, cols: Vec<T>) -> &mut Self
-        where T: IntoColumnRef {
-        self.add_group_by(cols.into_iter().map(|c| SimpleExpr::Column(c.into_column_ref())).collect())
+        where T: Into<ColumnRef> {
+        self.add_group_by(cols.into_iter().map(|c| SimpleExpr::Column(c.into())).collect())
     }
 
     #[deprecated(
@@ -873,8 +873,8 @@ impl SelectStatement {
         note = "Please use the [`SelectStatement::group_by_columns`] with a tuple as [`ColumnRef`]"
     )]
     pub fn group_by_table_columns<T, C>(&mut self, cols: Vec<(T, C)>) -> &mut Self
-        where T: IntoIden, C: IntoIden {
-        self.group_by_columns(cols.into_iter().map(|(t, c)| (t.into_iden(), c.into_iden())).collect())
+        where T: Into<Rc<dyn Iden + 'static>>, C: Into<Rc<dyn Iden + 'static>> {
+        self.group_by_columns(cols.into_iter().map(|(t, c)| ColumnRef::TableColumn(t.into(), c.into())).collect())
     }
 
     /// And where condition.
@@ -1084,9 +1084,9 @@ impl SelectStatement {
     /// );
     /// ```
     pub fn order_by<T>(&mut self, col: T, order: Order) -> &mut Self 
-        where T: IntoColumnRef {
+        where T: Into<ColumnRef> {
         self.orders.push(OrderExpr {
-            expr: SimpleExpr::Column(col.into_column_ref()),
+            expr: SimpleExpr::Column(col.into()),
             order,
         });
         self
@@ -1098,8 +1098,8 @@ impl SelectStatement {
     )]
     pub fn order_by_tbl<T, C>
         (&mut self, table: T, col: C, order: Order) -> &mut Self 
-        where T: IntoIden, C: IntoIden {
-        self.order_by((table.into_iden(), col.into_iden()), order)
+        where T: Into<Rc<dyn Iden + 'static>>, C: Into<Rc<dyn Iden + 'static>> {
+        self.order_by(ColumnRef::TableColumn(table.into(), col.into()), order)
     }
 
     /// Order by [`SimpleExpr`].
@@ -1125,10 +1125,10 @@ impl SelectStatement {
 
     /// Order by vector of columns.
     pub fn order_by_columns<T>(&mut self, cols: Vec<(T, Order)>) -> &mut Self 
-        where T: IntoColumnRef {
+        where T: Into<ColumnRef> {
         let mut orders = cols.into_iter().map(
             |(c, order)| OrderExpr {
-                expr: SimpleExpr::Column(c.into_column_ref()),
+                expr: SimpleExpr::Column(c.into()),
                 order,
             }).collect();
         self.orders.append(&mut orders);
@@ -1141,8 +1141,8 @@ impl SelectStatement {
     )]
     pub fn order_by_table_columns<T, C>
         (&mut self, cols: Vec<(T, C, Order)>) -> &mut Self 
-        where T: IntoIden, C: IntoIden {
-        self.order_by_columns(cols.into_iter().map(|(t, c, o)| ((t.into_iden(), c.into_iden()), o)).collect())
+        where T: Into<Rc<dyn Iden + 'static>>, C: Into<Rc<dyn Iden + 'static>> {
+        self.order_by_columns(cols.into_iter().map(|(t, c, o)| (ColumnRef::TableColumn(t.into(), c.into()), o)).collect())
     }
 
     /// Limit the number of returned rows.
